@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>딸깍 레벨 계산기</title>
+<style>
+:root {
+  --bg:#f3f5f8; --card:#fff; --line:#dfe4ea; --text:#1f2937; --muted:#687386;
+  --accent:#5d57e8; --accent2:#edeaff; --good:#0f8b5f; --warn:#b26b00;
+}
+*{box-sizing:border-box}
+html,body{width:100%;max-width:100%;overflow-x:hidden}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Pretendard,"Noto Sans KR",system-ui,sans-serif}
+.wrap{width:100%;max-width:none;margin:0;padding:clamp(10px,2vw,24px)}
+h1{margin:0 0 6px;font-size:clamp(22px,3vw,28px)} .sub{color:var(--muted);margin-bottom:20px}
+.grid{display:grid;grid-template-columns:minmax(300px,400px) minmax(0,1fr);gap:10px;align-items:start;width:100%}
+.card{min-width:0;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:0 8px 24px rgba(31,41,55,.05)}
+.section-title{font-weight:800;margin:4px 0 12px;font-size:17px}
+label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+input,select,button{font:inherit}
+input[type=number],input[type=date],input[type=text]{
+  width:100%;
+  height:24px;
+  padding:5px 9px;
+  border:1px solid var(--line);
+  border-radius:8px;
+  background:#fff;
+  color:var(--text);
+}
+select{
+  width:100%;
+  height:30px;
+  padding:0px 9px;
+  border:1px solid var(--line);
+  border-radius:8px;
+  background:#fff;
+  color:var(--text);
+}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.mode-row{display:flex;gap:8px;margin-bottom:10px}
+.mode-row label{margin:0;color:var(--text);display:flex;align-items:center;gap:5px}
+.check-list{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px 0px;max-height:230px;overflow:hidden;padding-right:4px}
+.check-item{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--text)}
+.check-item input{margin:0}
+.content-row{display:grid;grid-template-columns:minmax(0,1fr) 76px;gap:8px;align-items:center;margin-bottom:7px}
+.small-note{font-size:12px;color:var(--muted);line-height:1.45}
+hr{border:0;border-top:1px solid var(--line);margin:18px 0}
+button{width:100%;border:0;border-radius:11px;padding:12px 14px;background:var(--accent);color:#fff;font-weight:800;cursor:pointer}
+button:hover{filter:brightness(.96)}
+.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.stat{padding:13px;background:var(--accent2);border-radius:12px}
+.stat b{display:block;font-size:18px;margin-top:4px}
+.table-wrap{overflow-y:auto;overflow-x:hidden;max-height:75vh;border:1px solid var(--line);border-radius:12px;width:100%}
+table{border-collapse:collapse;width:100%;table-layout:fixed;font-size:clamp(11px,1.15vw,13px)}
+th,td{padding:9px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:normal;overflow-wrap:anywhere}
+th{position:sticky;top:0;background:#f8f9fc;z-index:1;color:#495365}
+th:first-child,td:first-child,th:nth-child(2),td:nth-child(2){text-align:left}
+.levelup{color:var(--good);font-weight:800}
+.weekly{background:#fff9e8}
+.muted{color:var(--muted)}
+.error{color:#c0392b;font-weight:700;margin-top:10px}
+
+.result-row{position:relative;cursor:help}
+.result-row > .hover-tooltip{display:block}
+.hover-tooltip{
+  position:fixed;
+  left:var(--tip-x,20px);
+  top:var(--tip-y,20px);
+  transform:none;
+  width:min(420px,calc(100vw - 32px));
+  max-height:none;
+  overflow:visible;
+  padding:12px;
+  border-radius:12px;
+  background:rgba(31,41,55,.97);
+  color:#fff;
+  font-size:12px;
+  line-height:1.5;
+  box-shadow:0 12px 34px rgba(0,0,0,.28);
+  opacity:0;
+  visibility:hidden;
+  pointer-events:none;
+  z-index:9999;
+}
+td.hover-tooltip{display:block;border:0;padding:12px}
+.result-row:hover .hover-tooltip{opacity:1;visibility:visible}
+.tooltip-group{padding:8px 0;border-bottom:1px solid rgba(255,255,255,.14)}
+.tooltip-group:last-child{border-bottom:0}
+.tooltip-title{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  font-weight:800;
+  margin-bottom:4px;
+  word-break:keep-all;
+  overflow-wrap:break-word;
+}
+.tooltip-items{
+  color:rgba(255,255,255,.78);
+  word-break:keep-all;
+  overflow-wrap:break-word;
+  white-space:normal;
+}
+.tooltip-title span:last-child{white-space:nowrap}
+.gain-cell{font-weight:700;text-decoration:underline dotted;text-underline-offset:3px}
+
+th:nth-child(1),td:nth-child(1){width:14%}
+th:nth-child(2),td:nth-child(2){width:22%}
+th:nth-child(3),td:nth-child(3){width:10%}
+th:nth-child(4),td:nth-child(4){width:22%}
+th:nth-child(5),td:nth-child(5){width:14%}
+th:nth-child(6),td:nth-child(6){width:18%}
+.bulk-actions{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.bulk-actions button{width:auto;padding:7px 10px;border-radius:8px;font-size:12px;background:#eef0f7;color:#394150}
+.bulk-actions button.primary{background:var(--accent);color:#fff}
+.calculate-row{display:grid;grid-template-columns:120px minmax(0,1fr);gap:10px;align-items:end}
+.calculate-row button{height:34px;padding:6px 12px}
+.bonus-grid{display:grid;grid-template-columns:1fr;gap:10px}
+.epic-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;margin-top:9px}
+@media(max-width:900px){
+  .grid{grid-template-columns:1fr}
+  .summary{grid-template-columns:1fr 1fr}
+  .wrap{padding:12px}
+  .check-list{grid-template-columns:1fr}
+}
+@media(max-width:620px){
+  .row{grid-template-columns:1fr}
+  .calculate-row{grid-template-columns:1fr}
+  .epic-row{grid-template-columns:1fr}
+  .summary{grid-template-columns:1fr}
+  .card{padding:14px}
+  th,td{padding:7px 5px}
+  .table-wrap{max-height:none}
+  th:nth-child(2),td:nth-child(2){display:none}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>메이플 딸깍 레벨 계산기</h1>
+  <div class="sub">현재 레벨과 경험치를 기준으로 각 컨텐츠의 경험치 보상을 정리하여 계산합니다.<br />주간 컨텐츠는 목요일에 일괄합산하며 사냥 경험치는 반영하지 않습니다.</div>
+
+  <div class="grid">
+    <div class="card">
+      <div class="section-title">시작 정보</div>
+      <div class="row">
+        <div><label>현재 레벨</label><input id="level" type="number" min="260" max="299" value="260"></div>
+        <div><label>시작 날짜</label><input id="startDate" type="date"></div>
+      </div>
+      <div class="mode-row">
+        <label><input type="radio" name="expMode" value="percent" checked> 현재 경험치 %</label>
+        <label><input type="radio" name="expMode" value="integer"> 현재 경험치 정수</label>
+      </div>
+      <input id="currentExp" type="number" min="0" step="any" value="0">
+
+      <hr>
+      <div class="section-title">주간 성장 콘텐츠</div>
+      <div class="bulk-actions">
+        <button type="button" data-bulk="weekly-growth" data-action="select">전체 선택</button>
+        <button type="button" data-bulk="weekly-growth" data-action="clear">전체 해제</button>
+      </div>
+      <div class="content-row"><label class="check-item"><input id="useBlueberry" type="checkbox"> 블루베리 농장</label><input id="blueberryCount" type="number" min="0" value="1"></div>
+      <div class="content-row"><label class="check-item"><input id="useMechaberry" type="checkbox"> 메카베리 농장</label><input id="mechaberryCount" type="number" min="0" value="1"></div>
+      <div class="content-row"><label class="check-item"><input id="useSauna" type="checkbox"> VIP 사우나</label><input id="saunaHours" type="number" min="0" step="0.5" value="1"></div>
+      <div class="content-row"><label class="check-item"><input id="useCoupon" type="checkbox"> 상급 EXP 쿠폰</label><input id="couponCount" type="number" min="0" value="0"></div>
+      <div>
+        <label class="check-item"><input id="useSpecterBlast" type="checkbox"> 스펙터 블래스트</label>
+      </div>
+      <div class="epic-row">
+        <div>
+          <label>에픽 던전</label>
+          <select id="epicDungeon">
+            <option value="">사용 안 함</option>
+            <option value="highMountain">하이마운틴</option>
+            <option value="anglerCompany">앵글러 컴퍼니</option>
+            <option value="nightmareParadise">악몽선경</option>
+          </select>
+        </div>
+        <div>
+          <label>추가 보상</label>
+          <select id="epicReward">
+            <option value="1">기본</option>
+            <option value="5">4배 추가 (총 5배)</option>
+            <option value="9">8배 추가 (총 9배)</option>
+          </select>
+        </div>
+      </div>
+      <div class="small-note">오른쪽 숫자는 주간 이용 횟수 또는 총 시간입니다. 선택한 수량은 매주 목요일에 한 번에 반영됩니다. 에픽 던전은 주간에 하나만 선택됩니다.</div>
+
+      <hr>
+      <div class="section-title">일일 퀘스트</div>
+      <div class="bulk-actions">
+        <button type="button" data-bulk="daily" data-action="select">전체 선택</button>
+        <button type="button" data-bulk="daily" data-action="clear">전체 해제</button>
+        <button type="button" class="primary" id="autoSelectDaily">레벨 맞춤 선택</button>
+      </div>
+      <div class="check-list" id="dailyList"></div>
+
+      <hr>
+      <div class="section-title">주간 퀘스트</div>
+      <div class="bulk-actions">
+        <button type="button" data-bulk="weekly" data-action="select">전체 선택</button>
+        <button type="button" data-bulk="weekly" data-action="clear">전체 해제</button>
+        <button type="button" class="primary" id="autoSelectWeekly">레벨 맞춤 선택</button>
+      </div>
+      <div class="check-list" id="weeklyList"></div>
+
+
+
+
+      <hr>
+      <div class="section-title">경험치 보너스</div>
+      <div class="small-note" style="margin-bottom:10px">
+        이벤트·패시브 등으로 추가되는 보너스 비율을 입력하세요.
+      </div>
+      <div class="bonus-grid">
+        <div>
+          <label>일퀘-아케인리버 보너스 (%)</label>
+          <input id="bonusArcaneDaily" type="number" min="0" step="0.1" value="0">
+        </div>
+        <div>
+          <label>일퀘-그란디스 보너스 (%)</label>
+          <input id="bonusGrandisDaily" type="number" min="0" step="0.1" value="0">
+        </div>
+        <div>
+          <label>몬스터파크 보너스 (%)</label>
+          <input id="bonusMonsterPark" type="number" min="0" step="0.1" value="0">
+        </div>
+      </div>
+      <hr>
+      <div class="section-title">몬스터파크</div>
+      <div class="bulk-actions">
+        <button type="button" class="primary" id="autoSelectMonsterPark">레벨 맞춤 지역</button>
+        <button type="button" id="clearMonsterPark">사용 안 함</button>
+      </div>
+      <div class="row">
+        <div><label>지역</label><select id="monsterParkRegion"></select></div>
+        <div><label>하루 횟수</label><input id="monsterParkRuns" type="number" min="0" max="7" value="0"></div>
+      </div>
+      <div class="small-note">일요일에는 자동으로 일요일 경험치를 적용합니다. 선택 지역의 입장 레벨 전에는 지급하지 않습니다.</div>
+
+      <hr>
+      <div class="bulk-actions">
+        <button type="button" class="primary" id="autoSelectAll">현재 레벨 기준 자동 선택</button>
+        <button type="button" id="clearAll">모든 선택 해제</button>
+      </div>
+      <div class="calculate-row">
+        <div>
+          <label>계산 기간</label>
+          <input id="days" type="number" min="1" max="365" value="90">
+        </div>
+        <button id="calculateBtn">계산하기</button>
+      </div>
+      <div id="error" class="error"></div>
+    </div>
+
+    <div class="card">
+      <div class="summary">
+        <div class="stat">최종 레벨<b id="sumLevel">-</b></div>
+        <div class="stat">최종 경험치<b id="sumPercent">-</b></div>
+        <div class="stat">총 획득 경험치율<b id="sumGain">-</b></div>
+        <div class="stat">레벨 상승<b id="sumLevelUps">-</b></div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>경과</th><th>날짜</th><th>요일</th><th>획득 경험치</th>
+            <th>레벨</th><th>진행률</th>
+          </tr></thead>
+          <tbody id="resultBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const TRAINING_EXP_BY_LEVEL = Object.freeze({"260": {"requiredExp": 1731919984062, "blueberry": 819939067200, "mechaberry": null, "sauna1Hour": 157362043680, "advancedExpCoupon": 388229000}, "261": {"requiredExp": 1749239183902, "blueberry": 831737808000, "mechaberry": null, "sauna1Hour": 159626448000, "advancedExpCoupon": 393816000}, "262": {"requiredExp": 1766731575741, "blueberry": 843555556800, "mechaberry": null, "sauna1Hour": 161894501280, "advancedExpCoupon": 399411000}, "263": {"requiredExp": 1784398891498, "blueberry": 855456465600, "mechaberry": null, "sauna1Hour": 164178514080, "advancedExpCoupon": 405046000}, "264": {"requiredExp": 1802242880412, "blueberry": 868859956800, "mechaberry": null, "sauna1Hour": 166750901280, "advancedExpCoupon": 411393000}, "265": {"requiredExp": 2342915744535, "blueberry": 977474044800, "mechaberry": null, "sauna1Hour": 187596028800, "advancedExpCoupon": 462820000}, "266": {"requiredExp": 2366344901980, "blueberry": 990896068800, "mechaberry": null, "sauna1Hour": 190171972800, "advancedExpCoupon": 469175000}, "267": {"requiredExp": 2390008350999, "blueberry": 1004369414400, "mechaberry": null, "sauna1Hour": 192757766400, "advancedExpCoupon": 475554000}, "268": {"requiredExp": 2413908434508, "blueberry": 1019587219200, "mechaberry": null, "sauna1Hour": 195678355680, "advancedExpCoupon": 482760000}, "269": {"requiredExp": 2438047518853, "blueberry": 1033215004800, "mechaberry": null, "sauna1Hour": 198293788800, "advancedExpCoupon": 489212000}, "270": {"requiredExp": 5412465491853, "blueberry": 1742950677600, "mechaberry": null, "sauna1Hour": 223003790640, "advancedExpCoupon": 550174000}, "271": {"requiredExp": 5466590146771, "blueberry": 1768697013600, "mechaberry": null, "sauna1Hour": 226297934640, "advancedExpCoupon": 558301000}, "272": {"requiredExp": 5521256048238, "blueberry": 1791718315200, "mechaberry": null, "sauna1Hour": 229243420800, "advancedExpCoupon": 565568000}, "273": {"requiredExp": 5576468608720, "blueberry": 1814895007200, "mechaberry": null, "sauna1Hour": 232208789040, "advancedExpCoupon": 572884000}, "274": {"requiredExp": 5632233294807, "blueberry": 1841095396800, "mechaberry": null, "sauna1Hour": 235561027680, "advancedExpCoupon": 581154000}, "275": {"requiredExp": 11377111255510, "blueberry": 2069275507200, "mechaberry": null, "sauna1Hour": 264755789280, "advancedExpCoupon": 653181000}, "276": {"requiredExp": 12514822381061, "blueberry": 2095358284800, "mechaberry": null, "sauna1Hour": 268092979200, "advancedExpCoupon": 661414000}, "277": {"requiredExp": 13766304619167, "blueberry": 2124863928000, "mechaberry": null, "sauna1Hour": 271868112000, "advancedExpCoupon": 670728000}, "278": {"requiredExp": 15142935081083, "blueberry": 2151221846400, "mechaberry": null, "sauna1Hour": 275240505600, "advancedExpCoupon": 679048000}, "279": {"requiredExp": 16657228589191, "blueberry": 2180965564800, "mechaberry": null, "sauna1Hour": 279046099440, "advancedExpCoupon": 688437000}, "280": {"requiredExp": 33647601750165, "blueberry": 2180965564800, "mechaberry": 3265600060800, "sauna1Hour": 313365662640, "advancedExpCoupon": 773107000}, "281": {"requiredExp": 37012361925181, "blueberry": 2180965564800, "mechaberry": 3310161465600, "sauna1Hour": 317641757040, "advancedExpCoupon": 783656000}, "282": {"requiredExp": 40713598117699, "blueberry": 2180965564800, "mechaberry": 3349939507200, "sauna1Hour": 321458842080, "advancedExpCoupon": 793073000}, "283": {"requiredExp": 44784957929468, "blueberry": 2180965564800, "mechaberry": 3394838304000, "sauna1Hour": 325767312000, "advancedExpCoupon": 803703000}, "284": {"requiredExp": 49263453722414, "blueberry": 2180965564800, "mechaberry": 3435009811200, "sauna1Hour": 329622153840, "advancedExpCoupon": 813213000}, "285": {"requiredExp": 99512176519276, "blueberry": 2180965564800, "mechaberry": 5148589248000, "sauna1Hour": 370542408480, "advancedExpCoupon": 914168000}, "286": {"requiredExp": 109463394171203, "blueberry": 2180965564800, "mechaberry": 5208577228800, "sauna1Hour": 374859725040, "advancedExpCoupon": 924819000}, "287": {"requiredExp": 120409733588323, "blueberry": 2180965564800, "mechaberry": 5276305267200, "sauna1Hour": 379734091200, "advancedExpCoupon": 936844000}, "288": {"requiredExp": 132450706947155, "blueberry": 2180965564800, "mechaberry": 5344448947200, "sauna1Hour": 384638371200, "advancedExpCoupon": 948944000}, "289": {"requiredExp": 145695777641870, "blueberry": 2180965564800, "mechaberry": 5405227660800, "sauna1Hour": 389012597280, "advancedExpCoupon": 959736000}, "290": {"requiredExp": 294305470836577, "blueberry": 2180965564800, "mechaberry": 6580266950400, "sauna1Hour": 437150602080, "advancedExpCoupon": 1078497000}, "291": {"requiredExp": 323736017920234, "blueberry": 2180965564800, "mechaberry": 6653978073600, "sauna1Hour": 442047494880, "advancedExpCoupon": 1078497000}, "292": {"requiredExp": 356109619712257, "blueberry": 2180965564800, "mechaberry": 6737444313600, "sauna1Hour": 447592454640, "advancedExpCoupon": 1078497000}, "293": {"requiredExp": 391720581683482, "blueberry": 2180965564800, "mechaberry": 6821411625600, "sauna1Hour": 453170702880, "advancedExpCoupon": 1078497000}, "294": {"requiredExp": 430892639851830, "blueberry": 2180965564800, "mechaberry": 6896248444800, "sauna1Hour": 458142379200, "advancedExpCoupon": 1078497000}, "295": {"requiredExp": 870403132500696, "blueberry": 2180965564800, "mechaberry": 6896248444800, "sauna1Hour": 458142379200, "advancedExpCoupon": 1078497000}, "296": {"requiredExp": 957443445750765, "blueberry": 2180965564800, "mechaberry": 6896248444800, "sauna1Hour": 458142379200, "advancedExpCoupon": 1078497000}, "297": {"requiredExp": 1053187790325840, "blueberry": 2180965564800, "mechaberry": 6896248444800, "sauna1Hour": 458142379200, "advancedExpCoupon": 1078497000}, "298": {"requiredExp": 1158506569358420, "blueberry": 2180965564800, "mechaberry": 6896248444800, "sauna1Hour": 458142379200, "advancedExpCoupon": 1078497000}, "299": {"requiredExp": 1737759854037630, "blueberry": 2180965564800, "mechaberry": 6896248444800, "sauna1Hour": 458142379200, "advancedExpCoupon": 1078497000}});
+const DAILY_QUESTS = Object.freeze([{"name": "소멸의 여로", "minLevel": 200, "exp": 732132258}, {"name": "츄츄 아일랜드", "minLevel": 210, "exp": 2141658246}, {"name": "레헬른", "minLevel": 220, "exp": 3189098250}, {"name": "아르카나", "minLevel": 225, "exp": 3305187639}, {"name": "모라스", "minLevel": 230, "exp": 4398266165}, {"name": "에스페라", "minLevel": 235, "exp": 4530843954}, {"name": "문브릿지", "minLevel": 245, "exp": 8397548775}, {"name": "고통의 미궁", "minLevel": 250, "exp": 9057690000}, {"name": "리멘", "minLevel": 255, "exp": 10225741680}, {"name": "세르니움", "minLevel": 260, "exp": 16455682080}, {"name": "호텔 아르크스", "minLevel": 265, "exp": 19371792600}, {"name": "오디움", "minLevel": 270, "exp": 23246151120}, {"name": "도원경", "minLevel": 275, "exp": 32127015480}, {"name": "아르테리아", "minLevel": 280, "exp": 38593455264}, {"name": "카르시온", "minLevel": 285, "exp": 45635222880}, {"name": "탈라하트", "minLevel": 290, "exp": 89730912960}]);
+const WEEKLY_QUESTS = Object.freeze([{"name": "에르다 스펙트럼", "minLevel": 200, "exp": 187726220}, {"name": "배고픈 무토", "minLevel": 210, "exp": 549143140}, {"name": "미드나잇 체이서", "minLevel": 220, "exp": 817717500}, {"name": "스피릿 세이비어", "minLevel": 225, "exp": 847484010}, {"name": "엔하임 디펜스", "minLevel": 230, "exp": 1127760555}, {"name": "프로텍트 에스페라", "minLevel": 235, "exp": 1161754860}]);
+const MONSTER_PARK = Object.freeze([{"name": "소멸의 여로", "minLevel": 200, "weekday": 359915080, "sunday": 539872620}, {"name": "츄츄 아일랜드", "minLevel": 210, "weekday": 1285078680, "sunday": 1927618020}, {"name": "레헬른", "minLevel": 220, "weekday": 3217660990, "sunday": 4826491485}, {"name": "아르카나", "minLevel": 225, "weekday": 4707573370, "sunday": 7061360055}, {"name": "모라스", "minLevel": 230, "weekday": 5993511040, "sunday": 8990266560}, {"name": "에스페라", "minLevel": 235, "weekday": 6919667370, "sunday": 10379501055}, {"name": "셀라스", "minLevel": 240, "weekday": 8712814920, "sunday": 13069222380}, {"name": "문브릿지", "minLevel": 245, "weekday": 11716616500, "sunday": 17574924750}, {"name": "고통의 미궁", "minLevel": 250, "weekday": 14058901000, "sunday": 21088351500}, {"name": "리멘", "minLevel": 255, "weekday": 15552557400, "sunday": 23328836100}, {"name": "세르니움", "minLevel": 260, "weekday": 37474604460, "sunday": 56211906690}, {"name": "호텔 아르크스", "minLevel": 265, "weekday": 44435446300, "sunday": 66653169450}, {"name": "오디움", "minLevel": 270, "weekday": 52818835200, "sunday": 79228252800}, {"name": "도원경", "minLevel": 275, "weekday": 76639838000, "sunday": 114959757000}, {"name": "아르테리아", "minLevel": 280, "weekday": 107204032000, "sunday": 160806048000}, {"name": "카르시온", "minLevel": 285, "weekday": 156017856000, "sunday": 234026784000}, {"name": "탈라하트", "minLevel": 290, "weekday": 218575316000, "sunday": 327862974000}]);
+const EPIC_DUNGEONS = Object.freeze({
+  highMountain: {
+    name: "하이마운틴",
+    minLevel: 260,
+    baseExp: 261000000000,
+  },
+  anglerCompany: {
+    name: "앵글러 컴퍼니",
+    minLevel: 270,
+    baseExp: 516000000000,
+  },
+  nightmareParadise: {
+    name: "악몽선경",
+    minLevel: 280,
+    baseExp: 1040000000000,
+  },
+});
+
+
+const $ = (id) => document.getElementById(id);
+const fmt = (n) => Math.floor(n).toLocaleString("ko-KR");
+const dayNames = ["일","월","화","수","목","금","토"];
+
+function init() {
+  const today = new Date();
+  $("startDate").value = today.toISOString().slice(0,10);
+
+  $("dailyList").innerHTML = DAILY_QUESTS.map((q,i) =>
+    `<label class="check-item"><input type="checkbox" class="daily-check" data-index="${i}"> ${q.name}</label>`
+  ).join("");
+
+  $("weeklyList").innerHTML = WEEKLY_QUESTS.map((q,i) =>
+    `<label class="check-item"><input type="checkbox" class="weekly-check" data-index="${i}"> ${q.name}</label>`
+  ).join("");
+
+  $("monsterParkRegion").innerHTML =
+    `<option value="">사용 안 함</option>` +
+    MONSTER_PARK.map((q,i)=>`<option value="${i}">${q.name}</option>`).join("");
+
+  document.querySelectorAll('input[name="expMode"]').forEach(el => el.addEventListener("change", updateExpInput));
+  $("level").addEventListener("input", updateExpInput);
+  $("calculateBtn").addEventListener("click", calculate);
+
+  document.querySelectorAll("[data-bulk]").forEach(button => {
+    button.addEventListener("click", () => {
+      const group = button.dataset.bulk;
+      const checked = button.dataset.action === "select";
+      if (group === "weekly-growth") {
+        setCheckboxes("#useBlueberry, #useMechaberry, #useSauna, #useCoupon, #useSpecterBlast", checked);
+        if (checked) {
+          autoSelectEpicDungeon();
+        } else {
+          $("epicDungeon").value = "";
+          $("epicReward").value = "1";
+        }
+      } else if (group === "daily") {
+        setCheckboxes(".daily-check", checked);
+      } else if (group === "weekly") {
+        setCheckboxes(".weekly-check", checked);
+      }
+      saveSettings();
+    });
+  });
+
+  $("autoSelectDaily").addEventListener("click", () => {
+    autoSelectDaily();
+    saveSettings();
+  });
+  $("autoSelectWeekly").addEventListener("click", () => {
+    autoSelectWeekly();
+    saveSettings();
+  });
+  $("autoSelectMonsterPark").addEventListener("click", () => {
+    autoSelectMonsterPark();
+    saveSettings();
+  });
+  $("clearMonsterPark").addEventListener("click", () => {
+    $("monsterParkRegion").value = "";
+    $("monsterParkRuns").value = 0;
+    saveSettings();
+  });
+  $("autoSelectAll").addEventListener("click", () => {
+    autoSelectAll();
+    saveSettings();
+  });
+  $("clearAll").addEventListener("click", () => {
+    clearAllSelections();
+    saveSettings();
+  });
+
+  $("level").addEventListener("change", () => {
+    calculate();
+    saveSettings();
+  });
+
+  $("resultBody").addEventListener("mousemove", (event) => {
+    const row = event.target.closest(".result-row");
+    if (!row) return;
+
+    const tooltip = row.querySelector(".hover-tooltip");
+    if (!tooltip) return;
+
+    const margin = 12;
+    const offset = 14;
+    const rect = tooltip.getBoundingClientRect();
+    const width = rect.width || Math.min(420, window.innerWidth - margin * 2);
+    const height = rect.height || 160;
+
+    let left = event.clientX + offset;
+    let top = event.clientY + offset;
+
+    if (left + width > window.innerWidth - margin) {
+      left = event.clientX - width - offset;
+    }
+    if (top + height > window.innerHeight - margin) {
+      top = event.clientY - height - offset;
+    }
+
+    left = Math.max(margin, Math.min(left, window.innerWidth - width - margin));
+    top = Math.max(margin, Math.min(top, window.innerHeight - height - margin));
+
+    row.style.setProperty("--tip-x", `${left}px`);
+    row.style.setProperty("--tip-y", `${top}px`);
+  });
+  bindAutoSave();
+  restoreSettings();
+  updateExpInput();
+
+  if (!localStorage.getItem(STORAGE_KEY)) {
+    autoSelectAll();
+  }
+
+  calculate();
+}
+
+function updateExpInput() {
+  const mode = document.querySelector('input[name="expMode"]:checked').value;
+  const input = $("currentExp");
+  if (mode === "percent") {
+    input.min = "0"; input.max = "99.999999"; input.step = "0.0001";
+    if (+input.value >= 100) input.value = 10;
+  } else {
+    input.min = "0"; input.removeAttribute("max"); input.step = "1";
+    if (+input.value < 100) input.value = 0;
+  }
+}
+
+function selectedIndexes(selector) {
+  return [...document.querySelectorAll(selector + ":checked")].map(el => +el.dataset.index);
+}
+
+const STORAGE_KEY = "mapleExpCalculatorSettingsV1";
+
+function getSavableElements() {
+  return [...document.querySelectorAll(
+    'input[id], select[id], input.daily-check, input.weekly-check'
+  )].filter(el => el.type !== "button");
+}
+
+function saveSettings() {
+  const data = {};
+
+  getSavableElements().forEach((el, index) => {
+    const key = el.id || `${el.classList.contains("daily-check") ? "daily" : "weekly"}:${el.dataset.index}`;
+    data[key] = el.type === "checkbox" || el.type === "radio" ? el.checked : el.value;
+  });
+
+  const checkedMode = document.querySelector('input[name="expMode"]:checked');
+  if (checkedMode) data.expMode = checkedMode.value;
+
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+function restoreSettings() {
+  let data;
+  try {
+    data = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+  } catch {
+    data = {};
+  }
+
+  if (data.expMode) {
+    const mode = document.querySelector(`input[name="expMode"][value="${data.expMode}"]`);
+    if (mode) mode.checked = true;
+  }
+
+  getSavableElements().forEach(el => {
+    const key = el.id || `${el.classList.contains("daily-check") ? "daily" : "weekly"}:${el.dataset.index}`;
+    if (!(key in data)) return;
+
+    if (el.type === "checkbox" || el.type === "radio") {
+      el.checked = Boolean(data[key]);
+    } else {
+      el.value = data[key];
+    }
+  });
+}
+
+function bindAutoSave() {
+  document.addEventListener("input", (event) => {
+    if (event.target.matches("input, select")) saveSettings();
+  });
+
+  document.addEventListener("change", (event) => {
+    if (event.target.matches("input, select")) saveSettings();
+  });
+
+  window.addEventListener("beforeunload", saveSettings);
+}
+
+function setCheckboxes(selector, checked) {
+  document.querySelectorAll(selector).forEach(el => {
+    if (!el.disabled) el.checked = checked;
+  });
+}
+
+function selectByLevel(selector, data) {
+  const level = Math.floor(+$("level").value || 260);
+  document.querySelectorAll(selector).forEach(el => {
+    const item = data[+el.dataset.index];
+    el.checked = level >= item.minLevel;
+  });
+}
+
+function autoSelectDaily() {
+  selectByLevel(".daily-check", DAILY_QUESTS);
+}
+
+function autoSelectWeekly() {
+  selectByLevel(".weekly-check", WEEKLY_QUESTS);
+}
+
+function autoSelectMonsterPark() {
+  const level = Math.floor(+$("level").value || 260);
+  let bestIndex = "";
+  MONSTER_PARK.forEach((item, index) => {
+    if (level >= item.minLevel) bestIndex = String(index);
+  });
+  $("monsterParkRegion").value = bestIndex;
+  if (bestIndex !== "" && +$("monsterParkRuns").value === 0) {
+    $("monsterParkRuns").value = 2;
+  }
+}
+
+function autoSelectEpicDungeon() {
+  const level = Math.floor(+$("level").value || 260);
+  let selected = "";
+
+  for (const [key, dungeon] of Object.entries(EPIC_DUNGEONS)) {
+    if (level >= dungeon.minLevel) selected = key;
+  }
+
+  $("epicDungeon").value = selected;
+  if (!["1", "5", "9"].includes($("epicReward").value)) {
+    $("epicReward").value = "1";
+  }
+}
+
+function autoSelectWeeklyGrowth() {
+  const level = Math.floor(+$("level").value || 260);
+  $("useBlueberry").checked = level >= 260;
+  $("useMechaberry").checked = level >= 280;
+  $("useSauna").checked = level >= 260;
+  $("useCoupon").checked = level >= 260;
+  $("useSpecterBlast").checked = level >= 260;
+  autoSelectEpicDungeon();
+}
+
+function autoSelectAll() {
+  autoSelectWeeklyGrowth();
+  autoSelectDaily();
+  autoSelectWeekly();
+  autoSelectMonsterPark();
+}
+
+function clearAllSelections() {
+  setCheckboxes("#useBlueberry, #useMechaberry, #useSauna, #useCoupon, #useSpecterBlast", false);
+  setCheckboxes(".daily-check", false);
+  setCheckboxes(".weekly-check", false);
+  $("useSpecterBlast").checked = false;
+  $("epicDungeon").value = "";
+  $("epicReward").value = "1";
+  $("monsterParkRegion").value = "";
+  $("monsterParkRuns").value = 0;
+}
+
+function getDailyGain(level, date) {
+  let gain = 0;
+  const groups = {
+    "블루베리 농장": { exp: 0, items: [], bonus: 0, compactTitle: true },
+    "메카베리 농장": { exp: 0, items: [], bonus: 0, compactTitle: true },
+    "VIP 사우나": { exp: 0, items: [], bonus: 0, compactTitle: true },
+    "상급 EXP 쿠폰": { exp: 0, items: [], bonus: 0, compactTitle: true },
+    "스펙터 블래스트": { exp: 0, items: [], bonus: 0, compactTitle: true },
+    "에픽 던전": { exp: 0, items: [], bonus: 0, compactTitle: true },
+    "일퀘-아케인리버": { exp: 0, items: [], bonus: 0 },
+    "주간퀘-아케인리버": { exp: 0, items: [], bonus: 0 },
+    "일퀘-그란디스": { exp: 0, items: [], bonus: 0 },
+    "몬스터파크": { exp: 0, items: [], bonus: 0 },
+  };
+
+  const isThursday = date.getDay() === 4;
+
+  const addToGroup = (groupName, expValue, itemText, bonusPercent = 0) => {
+    if (!expValue || expValue <= 0) return;
+    gain += expValue;
+    groups[groupName].exp += expValue;
+    groups[groupName].items.push(itemText);
+    groups[groupName].bonus = Math.max(groups[groupName].bonus || 0, bonusPercent);
+  };
+
+  if (isThursday) {
+    const t = TRAINING_EXP_BY_LEVEL[level];
+    if (t) {
+      const addWeeklyGrowth = (enabledId, countId, key, groupName, unit = "회") => {
+        if (!$(enabledId).checked) return;
+        const count = Math.max(0, +$(countId).value || 0);
+        const value = t[key];
+        if (value != null && count > 0) {
+          addToGroup(groupName, value * count, `${count}${unit}`);
+        }
+      };
+
+      addWeeklyGrowth("useBlueberry", "blueberryCount", "blueberry", "블루베리 농장");
+      addWeeklyGrowth("useMechaberry", "mechaberryCount", "mechaberry", "메카베리 농장");
+      addWeeklyGrowth("useSauna", "saunaHours", "sauna1Hour", "VIP 사우나", "시간");
+      addWeeklyGrowth("useCoupon", "couponCount", "advancedExpCoupon", "상급 EXP 쿠폰", "개");
+
+      if ($("useSpecterBlast").checked && t.advancedExpCoupon != null) {
+        const specterExp = t.advancedExpCoupon * 3000;
+        addToGroup("스펙터 블래스트", specterExp, "1회");
+      }
+
+      const epicKey = $("epicDungeon").value;
+      const epicDungeon = EPIC_DUNGEONS[epicKey];
+      const epicMultiplier = Number($("epicReward").value || 1);
+
+      if (
+        epicDungeon &&
+        level >= epicDungeon.minLevel &&
+        [1, 5, 9].includes(epicMultiplier)
+      ) {
+        const epicExp = epicDungeon.baseExp * epicMultiplier;
+        const rewardLabel = epicMultiplier === 1
+          ? "기본"
+          : epicMultiplier === 5
+            ? "4배"
+            : "8배";
+
+        addToGroup(
+          "에픽 던전",
+          epicExp,
+          `[${epicDungeon.name}] - ${rewardLabel}`
+        );
+      }
+    }
+  }
+
+  for (const idx of selectedIndexes(".daily-check")) {
+    const q = DAILY_QUESTS[idx];
+    if (level < q.minLevel) continue;
+
+    const isGrandis = q.minLevel >= 260;
+    const groupName = isGrandis ? "일퀘-그란디스" : "일퀘-아케인리버";
+    const bonusPercent = isGrandis
+      ? Math.max(0, +$("bonusGrandisDaily").value || 0)
+      : Math.max(0, +$("bonusArcaneDaily").value || 0);
+    const adjustedExp = q.exp * (1 + bonusPercent / 100);
+    addToGroup(
+      groupName,
+      adjustedExp,
+      q.name,
+      bonusPercent
+    );
+  }
+
+  const mpRuns = Math.max(0, +$("monsterParkRuns").value || 0);
+  const mpIndex = $("monsterParkRegion").value;
+  if (mpIndex !== "" && mpRuns > 0) {
+    const mp = MONSTER_PARK[+mpIndex];
+    if (level >= mp.minLevel) {
+      const isSunday = date.getDay() === 0;
+      const bonusPercent = Math.max(0, +$("bonusMonsterPark").value || 0);
+      const mpExp = (isSunday ? mp.sunday : mp.weekday) * mpRuns * (1 + bonusPercent / 100);
+      addToGroup(
+        "몬스터파크",
+        mpExp,
+        `${mp.name} ${mpRuns}회${isSunday ? " (일요일)" : ""}${bonusPercent > 0 ? ` (+${bonusPercent}% 보너스)` : ""}`,
+        bonusPercent
+      );
+    }
+  }
+
+  if (isThursday) {
+    for (const idx of selectedIndexes(".weekly-check")) {
+      const q = WEEKLY_QUESTS[idx];
+      if (level >= q.minLevel) {
+        addToGroup("주간퀘-아케인리버", q.exp, `${q.name} 1회`);
+      }
+    }
+  }
+
+  return { gain, groups };
+}
+
+function applyGain(level, exp, gain) {
+  let levelUps = 0;
+  let remainingGain = gain;
+
+  while (level < 300) {
+    const row = TRAINING_EXP_BY_LEVEL[level];
+    if (!row) break;
+    const needed = row.requiredExp - exp;
+    if (remainingGain < needed) {
+      exp += remainingGain;
+      remainingGain = 0;
+      break;
+    }
+    remainingGain -= needed;
+    level++;
+    exp = 0;
+    levelUps++;
+  }
+
+  return {level, exp, unused: remainingGain, levelUps};
+}
+
+function calculate() {
+  $("error").textContent = "";
+  let level = Math.floor(+$("level").value);
+  const days = Math.max(1, Math.min(365, Math.floor(+$("days").value || 90)));
+  const startDate = new Date($("startDate").value + "T00:00:00");
+
+  if (!TRAINING_EXP_BY_LEVEL[level]) {
+    $("error").textContent = "현재 데이터는 260~299레벨만 지원합니다.";
+    return;
+  }
+  if (Number.isNaN(startDate.getTime())) {
+    $("error").textContent = "시작 날짜를 확인해 주세요.";
+    return;
+  }
+
+  const mode = document.querySelector('input[name="expMode"]:checked').value;
+  let expInput = +$("currentExp").value || 0;
+  let exp = mode === "percent"
+    ? TRAINING_EXP_BY_LEVEL[level].requiredExp * (expInput / 100)
+    : expInput;
+
+  if (exp < 0 || exp >= TRAINING_EXP_BY_LEVEL[level].requiredExp) {
+    $("error").textContent = "현재 경험치는 0 이상, 해당 레벨 필요 경험치 미만이어야 합니다.";
+    return;
+  }
+
+  const startLevel = level;
+  let totalGain = 0;
+  let totalLevelUps = 0;
+  const rows = [];
+
+  for (let day = 1; day <= days; day++) {
+    const date = new Date(startDate);
+    date.setDate(date.getDate() + day);
+
+    const beforeLevel = level;
+    const levelAtStartOfDay = level;
+    const requiredAtStartOfDay = TRAINING_EXP_BY_LEVEL[levelAtStartOfDay]?.requiredExp ?? 0;
+    const {gain, groups} = getDailyGain(level, date);
+    const gainPercent = requiredAtStartOfDay > 0 ? (gain / requiredAtStartOfDay * 100) : 0;
+    const applied = applyGain(level, exp, gain);
+    level = applied.level;
+    exp = applied.exp;
+    totalGain += gain;
+    totalLevelUps += applied.levelUps;
+
+    const required = TRAINING_EXP_BY_LEVEL[level]?.requiredExp ?? 0;
+    const percent = level >= 300 ? 100 : (exp / required * 100);
+    const activeGroups = Object.entries(groups).filter(([, group]) => group.exp > 0);
+    const tooltipHtml = activeGroups.length
+      ? activeGroups.map(([groupName, group]) => {
+          const groupPercent = requiredAtStartOfDay > 0
+            ? (group.exp / requiredAtStartOfDay * 100)
+            : 0;
+
+          const titleText = group.compactTitle && group.items.length
+            ? `${groupName} - ${group.items.join(" · ")}`
+            : `${groupName}${group.bonus > 0 ? ` (+${group.bonus}%)` : ""}`;
+
+          return `
+            <div class="tooltip-group">
+              <div class="tooltip-title">
+                <span>${titleText}</span>
+                <span>+${groupPercent.toFixed(4)}%</span>
+              </div>
+              ${group.compactTitle ? "" : `<div class="tooltip-items">${group.items.join(" · ")}</div>`}
+            </div>`;
+        }).join("")
+      : `<div class="tooltip-group"><div class="tooltip-items">획득 콘텐츠 없음</div></div>`;
+
+    rows.push(`
+      <tr class="result-row ${date.getDay()===4 ? "weekly" : ""}">
+        <td>${day}일 후</td>
+        <td>${date.toLocaleDateString("ko-KR")}</td>
+        <td>${dayNames[date.getDay()]}</td>
+        <td class="gain-cell">+${gainPercent.toFixed(4)}%</td>
+        <td class="${level > beforeLevel ? "levelup" : ""}">${level}</td>
+        <td>${level >= 300 ? "MAX" : percent.toFixed(4) + "%"}</td>
+        <td class="hover-tooltip">${tooltipHtml}</td>
+      </tr>`);
+  }
+
+  $("resultBody").innerHTML = rows.join("");
+  $("sumLevel").textContent = level;
+  $("sumPercent").textContent = level >= 300 ? "MAX" : (exp / TRAINING_EXP_BY_LEVEL[level].requiredExp * 100).toFixed(4) + "%";
+  const startRequired = TRAINING_EXP_BY_LEVEL[startLevel]?.requiredExp ?? 0;
+  $("sumGain").textContent = startRequired > 0
+    ? (totalGain / startRequired * 100).toFixed(4) + "%"
+    : "-";
+  $("sumLevelUps").textContent = `${totalLevelUps}레벨`;
+}
+
+init();
+</script>
+</body>
+</html>
