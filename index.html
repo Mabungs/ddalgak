@@ -181,8 +181,8 @@ th:nth-child(6),td:nth-child(6){width:18%}
           <label>추가 보상</label>
           <select id="epicReward">
             <option value="1">기본</option>
-            <option value="4">4배</option>
-            <option value="8">8배</option>
+            <option value="5">4배</option>
+            <option value="9">8배</option>
           </select>
         </div>
       </div>
@@ -537,7 +537,7 @@ function autoSelectEpicDungeon() {
   }
 
   $("epicDungeon").value = selected;
-  if (!["1", "4", "8"].includes($("epicReward").value)) {
+  if (!["1", "5", "9"].includes($("epicReward").value)) {
     $("epicReward").value = "1";
   }
 }
@@ -624,13 +624,19 @@ function getDailyGain(level, date) {
       if (
         epicDungeon &&
         level >= epicDungeon.minLevel &&
-        [1, 4, 8].includes(epicMultiplier)
+        [1, 5, 9].includes(epicMultiplier)
       ) {
         const epicBonusPercent = Math.max(0, +$("bonusEpicDungeon").value || 0);
-        const epicExp = epicDungeon.baseExp * (epicMultiplier + epicBonusPercent / 100);
+
+        // 4배/8배 선택은 기존 계산기의 총 5배/9배를 의미한다.
+        // 에픽 던전 보너스는 최종 배율에 곱하지 않고, 기본 경험치의 보너스분만 더한다.
+        // 예: 30% 보너스 → 기본 1.3배, 4배 선택 5.3배, 8배 선택 9.3배
+        const totalMultiplier = epicMultiplier + epicBonusPercent / 100;
+        const epicExp = epicDungeon.baseExp * totalMultiplier;
+
         const rewardLabel = epicMultiplier === 1
           ? "기본"
-          : epicMultiplier === 4
+          : epicMultiplier === 5
             ? "4배"
             : "8배";
         const bonusLabel = epicBonusPercent > 0 ? ` (+${epicBonusPercent}%)` : "";
