@@ -181,8 +181,8 @@ th:nth-child(6),td:nth-child(6){width:18%}
           <label>추가 보상</label>
           <select id="epicReward">
             <option value="1">기본</option>
-            <option value="5">4배 추가 (총 5배)</option>
-            <option value="9">8배 추가 (총 9배)</option>
+            <option value="4">4배</option>
+            <option value="8">8배</option>
           </select>
         </div>
       </div>
@@ -226,6 +226,10 @@ th:nth-child(6),td:nth-child(6){width:18%}
         <div>
           <label>몬스터파크 보너스 (%)</label>
           <input id="bonusMonsterPark" type="number" min="0" step="0.1" value="0">
+        </div>
+        <div>
+          <label>에픽 던전 보너스 (%)</label>
+          <input id="bonusEpicDungeon" type="number" min="0" step="0.1" value="0">
         </div>
       </div>
       <hr>
@@ -533,7 +537,7 @@ function autoSelectEpicDungeon() {
   }
 
   $("epicDungeon").value = selected;
-  if (!["1", "5", "9"].includes($("epicReward").value)) {
+  if (!["1", "4", "8"].includes($("epicReward").value)) {
     $("epicReward").value = "1";
   }
 }
@@ -620,19 +624,22 @@ function getDailyGain(level, date) {
       if (
         epicDungeon &&
         level >= epicDungeon.minLevel &&
-        [1, 5, 9].includes(epicMultiplier)
+        [1, 4, 8].includes(epicMultiplier)
       ) {
-        const epicExp = epicDungeon.baseExp * epicMultiplier;
+        const epicBonusPercent = Math.max(0, +$("bonusEpicDungeon").value || 0);
+        const epicExp = epicDungeon.baseExp * (epicMultiplier + epicBonusPercent / 100);
         const rewardLabel = epicMultiplier === 1
           ? "기본"
-          : epicMultiplier === 5
+          : epicMultiplier === 4
             ? "4배"
             : "8배";
+        const bonusLabel = epicBonusPercent > 0 ? ` (+${epicBonusPercent}%)` : "";
 
         addToGroup(
           "에픽 던전",
           epicExp,
-          `[${epicDungeon.name}] - ${rewardLabel}`
+          `[${epicDungeon.name}] - ${rewardLabel}${bonusLabel}`,
+          epicBonusPercent
         );
       }
     }
